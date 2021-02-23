@@ -16,7 +16,6 @@ import pygame
 import math
 import numpy as np
 from scipy.integrate import ode
-# from lqr_starter import *
 from value_iteration import *
 
 # The very basic code you should know and interact with starts here. Sets some variables that you 
@@ -34,21 +33,22 @@ x0 = [0.0,0,0,np.pi+np.pi/40]           # This specifies the average starting st
 goal = np.array([ 0, 0, 0, np.pi ])     # This is where we want to end up. Perfectly at the centre  
                                         # with the pole vertical.
 
-groups, goal_state_indices = discretize_state_space()
+groups, discretized_goal = discretize_state_space()
+actions = np.linspace(-1, 1, 10)
+
 num_states = list(map(lambda r: len(r), groups))
 states_table = np.zeros(num_states)
-policy = value_iteration(states_table, goal_state_indices, groups)
+
+policy = value_iteration(states_table, actions, discretized_goal, groups, threshold=1e-2, gamma=.3)
 
 
-##################
-# LQR
-##################
+def computeControl(x, groups=groups, policy=policy):
+    discrete_x, indices =  discretize_state(groups, x)
 
-# Fill in this function
-def computeControl( x , g=goal, groups=groups, policy=policy):
-    discrete_x =  discretize_states(groups, x)
-    control = policy[discrete_x]
+    # discrete actions
+    control = policy[tuple(indices)]
     return control
+
 
 # After this is all the code to run the cartpole physics, draw it on the screen, etc. 
 # You should not have to change anything below this, but are encouraged to read and understand
@@ -211,12 +211,6 @@ while not Done:
 
         control = computeControl( state )  # This is the call to the code you write
         state = pendulum.step(control)
-        # counter+=1
-        # if counter == 20:
-        #     break
-        #     print('finishing')
-
-
 
         redraw()
  

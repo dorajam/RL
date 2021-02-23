@@ -40,7 +40,6 @@ goal = np.array([ 0, 0, 0, np.pi ])     # This is where we want to end up. Perfe
 
 # Fill in this function
 def computeControl( x , g=goal):
-    print(x)
     k = lqr(A,B,Q,R)
     control = np.dot(k, (g - x)) # This means apply no force. Please replace this with your computations and 
                                  # return a single scalar (real number), force that should be applied to the cart
