@@ -56,21 +56,25 @@ def run_env(network, render=False, episodes=500, timestamps=100, means=None, std
             if np.any(means) and np.any(stdevs):
                 observation = normalize(observation, means, stdevs)
 
+            if episode_data:
+                episode_data[-1]['next_observation'] = observation.tolist()
+
             # forward prop -> get action
             action = network(observation)
             res.append(observation)
 
             # takes action
             out = env.step(action)
-            observation, reward, done, info = out
+            next_observation, reward, done, info = out
 
             episode_data.append({
                 'observation': observation.tolist(),
+                'next_observation': None,
                 'reward': reward,
                 'action': action.item(),
-                'done': done,
-                'info': info,
+                'done': done
             })
+            observation = next_observation
 
             if done:
                 print("Episode finished after {} timesteps".format(t+1))
