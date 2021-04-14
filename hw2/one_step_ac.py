@@ -52,20 +52,26 @@ class ExperienceReplay(object):
         self.rewards = torch.zeros((1, max_size))
         self.next_states = torch.zeros((state_dim, max_size))
         self.next_actions = torch.zeros((action_dim, max_size))
+        self.not_done_flag = torch.ones((1, max_size))
         self.size = 0
         self.pointer = 0
         self.device = device
 
     def add(self, new):
+        not_done = 1.
         state, action, reward, next_state, next_action = new
+
         if not isinstance(next_state, torch.Tensor):
-            return
+            not_done = 0.
+            next_state = torch.zeros(state.shape)
+            next_action = torch.zeros(action.shape)
 
         self.states[:, self.pointer] = state
         self.actions[:, self.pointer] = action
         self.rewards[:, self.pointer] = reward
         self.next_states[:, self.pointer] = next_state
         self.next_actions[:, self.pointer] = next_action
+        self.not_done_flag[:, self.pointer] = not_done
 
         self.pointer = (self.pointer + 1) % self.max_size
         self.size = min(self.size + 1, self.max_size)
@@ -79,6 +85,7 @@ class ExperienceReplay(object):
             torch.FloatTensor(self.rewards[:, pick_ids]).transpose(0, 1).to(self.device),
             torch.FloatTensor(self.next_states[:, pick_ids]).transpose(0, 1).to(self.device),
             torch.FloatTensor(self.next_actions[:, pick_ids]).transpose(0, 1).to(self.device),
+            torch.FloatTensor(self.not_done_flag[:, pick_ids]).transpose(0, 1).to(self.device),
         )
 
 
@@ -125,15 +132,11 @@ class DDPG(nn.Module):
 
         self.experience_replay.add(new_row)
 
-        state_b, a_b, r_b, ns_b, na_b = \
+        state_b, a_b, r_b, ns_b, na_b, not_done = \
             self.experience_replay.sample(batch_size)
 
-
-        if not isinstance(ns_b, torch.Tensor):
-            target_q = r_b
-        else:
-            target_q = self.target_critic(ns_b, na_b)
-            target_q = (r_b + self.gamma * target_q).detach()
+        target_q = self.target_critic(ns_b, na_b)
+        target_q = (r_b + not_done * self.gamma * target_q).detach()
 
         current_q = self.critic(state_b, a_b)
         td_error = F.mse_loss(current_q, target_q)
@@ -154,8 +157,8 @@ class DDPG(nn.Module):
             next_state = torch.FloatTensor(next_state).to(self.device)
         except:
             next_state = None
-        import ipdb;
-        ipdb.set_trace()
+        # import ipdb;
+        # ipdb.set_trace()
 
         if not isinstance(next_state, torch.Tensor):
             target_q = reward.reshape(1,-1)
@@ -166,7 +169,7 @@ class DDPG(nn.Module):
         current_q = self.critic(state.reshape(1,-1), action.reshape(1,-1))
         td_error = F.mse_loss(current_q, target_q)
 
-        return td_error, target_q, reward
+        return td_error, current_q, reward
 
     def save(self, filename):
         torch.save(self.critic.state_dict(), filename + "_critic")
