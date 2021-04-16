@@ -5,7 +5,7 @@ import os
 import numpy as np
 import torch
 import utils
-from one_step_ac import DDPG
+from ddpg import DDPG
 
 
 def train(model, dataset, epochs=100, save_path=''):
@@ -22,9 +22,9 @@ def train(model, dataset, epochs=100, save_path=''):
             if episode % 200 == 0:
                 print(f'Running episode {episode}...')
             if episode % 50 == 0:
-                print(f'Running episode {episode}...')
                 if episode_errors:
-                    print(f'Last TD error at episode {episode}: ', episode_errors[-1])
+                    print(f'Running episode {episode}...')
+                    print(f'AVG TD error at episode {episode}: ', np.sum(episode_errors)/iter)
 
             # if episode_errors:
             # print(f'Avg episode TD error at episode {episode}: ', episode_errors[-1])
@@ -85,7 +85,7 @@ def main(args):
         epoch_errors = train(model, dataset, args.epochs, save_path=args.save_path)
 
         # save losses
-        with open(f'epoch_errors_{args.dataset}[:-6].txt', 'w+') as f:
+        with open(f'epoch_errors_{args.dataset[:-6]}.txt', 'w+') as f:
             f.write(json.dumps(epoch_errors))
 
     errors, predicted, rewards = eval(model, dataset)
@@ -106,7 +106,7 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("-dataset", "--dataset", "-d", default='dataset_eps0.0.jsonl', type=str)
-    parser.add_argument("-epochs", "--epochs", "-e", default=5, type=int)
+    parser.add_argument("-epochs", "--epochs", "-e", default=10, type=int)
     parser.add_argument("--save_path", default='./models')
     parser.add_argument("--eval_only", default=False)
     parser.add_argument("--load_model", default="", help='Filename to load from')

@@ -96,9 +96,9 @@ class DDPG(nn.Module):
             state_dim=6,
             action_dim=3,
             gamma=0.99,
-            eta=1e-2,
+            eta=1e-3,
             tau=0.001,
-            max_size=100,
+            max_size=500,
             device='cuda'
     ):
         super(DDPG, self).__init__()
